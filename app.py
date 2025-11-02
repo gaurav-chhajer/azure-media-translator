@@ -281,6 +281,7 @@ if input_method == "YouTube URL":
                     'merge_output_format': 'mp4',
                     'noplaylist': True,
                     'quiet': True,
+                    'cookiefile': 'cookies.txt',
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
@@ -494,4 +495,5 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
         st.success("Total processing complete!")
         
     except Exception as e:
+
         st.error(f"An error occurred during the processing: {e}")
