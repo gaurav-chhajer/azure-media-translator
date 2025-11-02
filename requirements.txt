@@ -1,4 +1,4 @@
 streamlit
 azure-cognitiveservices-speech
 yt-dlp
-moviepy
+moviepy==1.0.3
