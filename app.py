@@ -10,6 +10,11 @@ import yt_dlp
 import moviepy.editor as mp
 import concurrent.futures 
 
+import imageio_ffmpeg
+import os
+os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
+
+
 # (No pydub needed)
 
 # =============================================================================
