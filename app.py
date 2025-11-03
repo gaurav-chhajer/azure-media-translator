@@ -1,19 +1,33 @@
 import os
+import subprocess
 
-# --- Set up ffmpeg path BEFORE importing moviepy ---
-try:
-    import imageio_ffmpeg
-    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
-    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
-    print(f"✅ ffmpeg loaded from imageio_ffmpeg: {ffmpeg_path}")
-except Exception as e:
-    print(f"⚠️ imageio_ffmpeg not found or failed: {e}")
-    # fallback to system ffmpeg (works on Streamlit Cloud)
-    os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
+# --- Safe ffmpeg setup for Streamlit Cloud ---
+def ensure_ffmpeg():
+    try:
+        # Try imageio-ffmpeg portable binary
+        import imageio_ffmpeg
+        ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+        if os.path.exists(ffmpeg_path):
+            os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
+            print(f"✅ Using imageio_ffmpeg binary: {ffmpeg_path}")
+            return
+    except Exception as e:
+        print(f"⚠️ imageio_ffmpeg failed: {e}")
 
-# --- Now import moviepy AFTER the environment variable is set ---
+    # Fallback: use system ffmpeg (verify it runs)
+    try:
+        subprocess.run(["ffmpeg", "-version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
+        print("✅ Using system ffmpeg")
+    except Exception as e:
+        raise RuntimeError(f"❌ No working ffmpeg found: {e}")
+
+ensure_ffmpeg()
+
+# --- Import moviepy AFTER ffmpeg setup ---
 import moviepy.editor as mp
 
+# --- Rest of your imports ---
 import streamlit as st
 import azure.cognitiveservices.speech as speechsdk
 import tempfile
@@ -23,8 +37,6 @@ import threading
 import shutil
 import yt_dlp
 import concurrent.futures
-
-
 
 # =============================================================================
 # 1. PAGE CONFIG & SECRETS (Unchanged)
