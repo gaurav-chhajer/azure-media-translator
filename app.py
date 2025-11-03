@@ -9,8 +9,9 @@ import shutil
 import yt_dlp
 import moviepy.editor as mp
 import concurrent.futures 
-
-# (No pydub needed)
+import imageio_ffmpeg
+import os
+os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
 
 # =============================================================================
 # 1. PAGE CONFIG & SECRETS (Unchanged)
@@ -514,3 +515,4 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
     except Exception as e:
 
         st.error(f"An error occurred during the processing: {e}")
+
