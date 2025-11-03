@@ -9,9 +9,8 @@ import shutil
 import yt_dlp
 import moviepy.editor as mp
 import concurrent.futures 
-import imageio_ffmpeg
-import os
-os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
+
+# (No pydub needed)
 
 # =============================================================================
 # 1. PAGE CONFIG & SECRETS (Unchanged)
@@ -267,22 +266,17 @@ video_path = None
 audio_only_path = None
 uploaded_file = None
 url = None
-
 VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'webm']
 AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a', 'ogg', 'flac']
 
 # --- (NEW) Function to write secrets to a file ---
-# We run this once at the top of the script
 @st.cache_resource
 def write_secrets_to_files():
-    # 1. Write YouTube Cookies
     if 'YOUTUBE_COOKIE_CONTENT' in st.secrets:
         with open('cookies.txt', 'w') as f:
             f.write(st.secrets['YOUTUBE_COOKIE_CONTENT'])
         return True
     return False
-
-# Run the function to create the cookie file
 write_secrets_to_files()
 
 if input_method == "YouTube URL":
@@ -291,16 +285,14 @@ if input_method == "YouTube URL":
         try:
             with st.spinner("Downloading YouTube video... (using yt-dlp)"):
                 download_path_template = os.path.join(temp_dir, 'downloaded_video.%(ext)s')
-                
                 ydl_opts = {
                     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                     'outtmpl': download_path_template,
                     'merge_output_format': 'mp4',
                     'noplaylist': True,
                     'quiet': True,
-                    'cookiefile': 'cookies.txt', # This will now find the file we just wrote
+                    'cookiefile': 'cookies.txt', 
                 }
-
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 final_video_path = os.path.join(temp_dir, 'downloaded_video.mp4')
@@ -365,7 +357,7 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
                     ffmpeg_params=["-ac", "1"],
                     logger=None
                 )
-            st.success("Step 1 (Extraction) complete.") # <-- (FIX 1) Added success message
+            st.success("Step 1 (Extraction) complete.")
             
             # --- STEP 2: Split and Recognize in Parallel ---
             with st.spinner(f"Step 2/4: Splitting audio and recognizing chunks in parallel..."):
@@ -406,12 +398,31 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
                     translated_audio_clips = [clip for clip in results if clip is not None]
                 st.success("Step 3 (Synthesis) complete.")
             
-            # --- STEP 4: Composite Audio and Mux Video ---
+            # --- (MODIFIED) STEP 4: Composite Audio and Mux Video ---
             if translated_audio_clips and video_clip:
-                with st.spinner("Step 4/4: Building new audio track and mixing video..."): # <-- (FIX 2) "mixing"
+                with st.spinner("Step 4/4: Building new audio track and mixing video..."):
+                    
+                    # --- THIS IS THE FIX ---
+                    # 1. Create the composite audio clip object
                     final_audio = mp.CompositeAudioClip(translated_audio_clips)
                     final_audio.duration = video_clip.duration
-                    final_video_clip = video_clip.set_audio(final_audio)
+                    
+                    # 2. Write it to a single temporary file FIRST
+                    final_audio_path = os.path.join(temp_dir, "final_dubbed_audio.wav")
+                    final_audio.write_audiofile(
+                        final_audio_path, 
+                        codec='pcm_s16le', 
+                        fps=16000,
+                        logger=None
+                    )
+                    
+                    # 3. Load that single file back
+                    new_audio_clip = mp.AudioFileClip(final_audio_path)
+                    
+                    # 4. Set the video's audio to the new single clip
+                    final_video_clip = video_clip.set_audio(new_audio_clip)
+                    # --- END OF FIX ---
+
                     final_video_path = os.path.join(temp_dir, "translated_video.mp4")
                     final_video_clip.write_videofile(
                         final_video_path, 
@@ -419,14 +430,14 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
                         audio_codec='aac',
                         logger=None
                     )
-                st.success("Step 4 (Mixing) complete.") # <-- (FIX 2) "Mixing"
+                st.success("Step 4 (Mixing) complete.")
                 st.subheader("Translated Video")
                 st.video(final_video_path)
                 with open(final_video_path, "rb") as f:
                     st.download_button("Download Translated Video 💾", data=f, file_name="translated_video.mp4")
             
         # ==================================
-        #  AUDIO-ONLY PIPELINE
+        #  AUDIO-ONLY PIPELINE (Unchanged)
         # ==================================
         elif audio_only_path:
             # --- STEP 1: Convert Audio ---
@@ -442,7 +453,7 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
                     ffmpeg_params=["-ac", "1"],
                     logger=None
                 )
-            st.success("Step 1 (Conversion) complete.") # <-- (FIX 1) Added success message
+            st.success("Step 1 (Conversion) complete.") 
 
             # --- STEP 2: Split and Recognize in Parallel ---
             with st.spinner(f"Step 2/4: Splitting audio and recognizing chunks in parallel..."):
@@ -495,7 +506,7 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
                         fps=16000,
                         logger=None
                     )
-                st.success("Step 4 (Mixing) complete.") # <-- (FIX 2) "Mixing"
+                st.success("Step 4 (Mixing) complete.") 
                 st.subheader("Translated Audio")
                 st.audio(final_audio_path)
                 with open(final_audio_path, "rb") as f:
@@ -513,6 +524,4 @@ if st.button("Process and Translate", disabled=(video_path is None and audio_onl
         st.success("Total processing complete!")
         
     except Exception as e:
-
         st.error(f"An error occurred during the processing: {e}")
-
