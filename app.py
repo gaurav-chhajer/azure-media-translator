@@ -13,11 +13,8 @@ import concurrent.futures
 import imageio_ffmpeg
 import os
 
-# Ensure ffmpeg is set up
-try:
-    os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
-except Exception as e:
-    print("⚠️ Could not locate ffmpeg via imageio_ffmpeg:", e)
+os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
+
 
 # =============================================================================
 # 1. PAGE CONFIG & SECRETS (Unchanged)
