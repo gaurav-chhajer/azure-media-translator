@@ -266,8 +266,23 @@ video_path = None
 audio_only_path = None
 uploaded_file = None
 url = None
+
 VIDEO_EXTENSIONS = ['mp4', 'mkv', 'avi', 'mov', 'webm']
 AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a', 'ogg', 'flac']
+
+# --- (NEW) Function to write secrets to a file ---
+# We run this once at the top of the script
+@st.cache_resource
+def write_secrets_to_files():
+    # 1. Write YouTube Cookies
+    if 'YOUTUBE_COOKIE_CONTENT' in st.secrets:
+        with open('cookies.txt', 'w') as f:
+            f.write(st.secrets['YOUTUBE_COOKIE_CONTENT'])
+        return True
+    return False
+
+# Run the function to create the cookie file
+write_secrets_to_files()
 
 if input_method == "YouTube URL":
     url = st.text_input("Enter YouTube URL:")
@@ -275,14 +290,16 @@ if input_method == "YouTube URL":
         try:
             with st.spinner("Downloading YouTube video... (using yt-dlp)"):
                 download_path_template = os.path.join(temp_dir, 'downloaded_video.%(ext)s')
+                
                 ydl_opts = {
                     'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
                     'outtmpl': download_path_template,
                     'merge_output_format': 'mp4',
                     'noplaylist': True,
                     'quiet': True,
-                    'cookiefile': 'cookies.txt',
+                    'cookiefile': 'cookies.txt', # This will now find the file we just wrote
                 }
+
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
                 final_video_path = os.path.join(temp_dir, 'downloaded_video.mp4')
