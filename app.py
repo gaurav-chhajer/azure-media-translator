@@ -1,28 +1,29 @@
 import os
-import imageio_ffmpeg
 
-# Ensure ffmpeg is available (fallback-safe)
+# --- Set up ffmpeg path BEFORE importing moviepy ---
 try:
+    import imageio_ffmpeg
     ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
     os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
-    print(f"✅ Using ffmpeg from: {ffmpeg_path}")
+    print(f"✅ ffmpeg loaded from imageio_ffmpeg: {ffmpeg_path}")
 except Exception as e:
-    print(f"⚠️ imageio_ffmpeg failed: {e}")
-    # fallback to ffmpeg-python
-    import ffmpeg
-    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg._probe.find_executable('ffmpeg') or 'ffmpeg'
+    print(f"⚠️ imageio_ffmpeg not found or failed: {e}")
+    # fallback to system ffmpeg (works on Streamlit Cloud)
+    os.environ["IMAGEIO_FFMPEG_EXE"] = "ffmpeg"
 
+# --- Now import moviepy AFTER the environment variable is set ---
 import moviepy.editor as mp
 
 import streamlit as st
 import azure.cognitiveservices.speech as speechsdk
 import tempfile
-import time 
+import time
 import io
 import threading
 import shutil
 import yt_dlp
-import concurrent.futures 
+import concurrent.futures
+
 
 
 # =============================================================================
