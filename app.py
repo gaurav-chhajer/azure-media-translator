@@ -10,10 +10,20 @@ import yt_dlp
 import moviepy.editor as mp
 import concurrent.futures 
 
-import imageio_ffmpeg
 import os
+import imageio_ffmpeg
 
-os.environ["IMAGEIO_FFMPEG_EXE"] = imageio_ffmpeg.get_ffmpeg_exe()
+# Ensure ffmpeg is available (fallback-safe)
+try:
+    ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
+    print(f"✅ Using ffmpeg from: {ffmpeg_path}")
+except Exception as e:
+    print(f"⚠️ imageio_ffmpeg failed: {e}")
+    # fallback to ffmpeg-python
+    import ffmpeg
+    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg._probe.find_executable('ffmpeg') or 'ffmpeg'
+
 
 
 # =============================================================================
