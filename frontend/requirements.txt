@@ -1,0 +1,6 @@
+streamlit
+requests
+streamlit-webrtc
+aiortc
+azure-cognitiveservices-speech
+av
